@@ -514,15 +514,12 @@ public final class Utils {
   }
 
   public static class AnalyticsThreadFactory implements ThreadFactory {
-
-    @SuppressWarnings("NullableProblems")
-    public Thread newThread(Runnable r) {
+    public Thread newThread(@NonNull Runnable r) {
       return new AnalyticsThread(r);
     }
   }
 
   private static class AnalyticsThread extends Thread {
-
     private static final AtomicInteger SEQUENCE_GENERATOR = new AtomicInteger(1);
 
     public AnalyticsThread(Runnable r) {

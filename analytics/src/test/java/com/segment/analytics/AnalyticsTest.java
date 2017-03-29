@@ -45,7 +45,6 @@ import com.segment.analytics.integrations.TrackPayload;
 import com.segment.analytics.internal.Utils.AnalyticsNetworkExecutorService;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import org.assertj.core.data.MapEntry;
@@ -140,7 +139,6 @@ public class AnalyticsTest {
             DEFAULT_FLUSH_INTERVAL,
             analyticsExecutor,
             false,
-            new CountDownLatch(0),
             false,
             false,
             optOut,
@@ -738,7 +736,6 @@ public class AnalyticsTest {
             DEFAULT_FLUSH_INTERVAL,
             analyticsExecutor,
             true,
-            new CountDownLatch(0),
             false,
             false,
             optOut,
@@ -832,7 +829,6 @@ public class AnalyticsTest {
             DEFAULT_FLUSH_INTERVAL,
             analyticsExecutor,
             true,
-            new CountDownLatch(0),
             false,
             false,
             optOut,
@@ -910,7 +906,6 @@ public class AnalyticsTest {
             DEFAULT_FLUSH_INTERVAL,
             analyticsExecutor,
             false,
-            new CountDownLatch(0),
             true,
             false,
             optOut,
@@ -977,7 +972,6 @@ public class AnalyticsTest {
             DEFAULT_FLUSH_INTERVAL,
             analyticsExecutor,
             false,
-            new CountDownLatch(0),
             false,
             false,
             optOut,

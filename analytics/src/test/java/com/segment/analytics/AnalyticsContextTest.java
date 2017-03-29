@@ -144,15 +144,6 @@ public class AnalyticsContextTest {
   }
 
   @Test
-  public void device() {
-    AnalyticsContext.Device device = new AnalyticsContext.Device();
-
-    device.putAdvertisingInfo("adId", true);
-    assertThat(device).containsEntry("advertisingId", "adId");
-    assertThat(device).containsEntry("adTrackingEnabled", true);
-  }
-
-  @Test
   public void location() {
     AnalyticsContext.Location location = new AnalyticsContext.Location();
 

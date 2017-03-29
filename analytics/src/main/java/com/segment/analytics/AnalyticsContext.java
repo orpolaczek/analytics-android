@@ -144,24 +144,9 @@ public class AnalyticsContext extends ValueMap {
     }
   }
 
-  // For deserialization and wrapping
+  // For deserialization and wrapping.
   AnalyticsContext(Map<String, Object> delegate) {
     super(delegate);
-  }
-
-  void attachAdvertisingId(Context context, CountDownLatch latch, Logger logger) {
-    // This is done as an extra step so we don't run into errors like this for testing
-    // http://pastebin.com/gyWJKWiu.
-    if (isOnClassPath("com.google.android.gms.ads.identifier.AdvertisingIdClient")) {
-      // This needs to be done each time since the settings may have been updated.
-      new GetAdvertisingIdTask(this, latch, logger).execute(context);
-    } else {
-      logger.debug(
-          "Not collecting advertising ID because "
-              + "com.google.android.gms.ads.identifier.AdvertisingIdClient "
-              + "was not found on the classpath.");
-      latch.countDown();
-    }
   }
 
   @Override
@@ -407,8 +392,6 @@ public class AnalyticsContext extends ValueMap {
     @Private static final String DEVICE_MODEL_KEY = "model";
     @Private static final String DEVICE_NAME_KEY = "name";
     @Private static final String DEVICE_TOKEN_KEY = "token";
-    @Private static final String DEVICE_ADVERTISING_ID_KEY = "advertisingId";
-    @Private static final String DEVICE_AD_TRACKING_ENABLED_KEY = "adTrackingEnabled";
 
     @Private
     Device() {}
@@ -422,14 +405,6 @@ public class AnalyticsContext extends ValueMap {
     public Device putValue(String key, Object value) {
       super.putValue(key, value);
       return this;
-    }
-
-    /** Set the advertising information for this device. */
-    void putAdvertisingInfo(String advertisingId, boolean adTrackingEnabled) {
-      if (adTrackingEnabled && !isNullOrEmpty(advertisingId)) {
-        put(DEVICE_ADVERTISING_ID_KEY, advertisingId);
-      }
-      put(DEVICE_AD_TRACKING_ENABLED_KEY, adTrackingEnabled);
     }
 
     /** Set a device token. */

@@ -31,6 +31,7 @@ import static com.segment.analytics.internal.Utils.getResourceString;
 import static com.segment.analytics.internal.Utils.getSegmentSharedPreferences;
 import static com.segment.analytics.internal.Utils.hasPermission;
 import static com.segment.analytics.internal.Utils.isNullOrEmpty;
+import static com.segment.analytics.internal.Utils.isOnClassPath;
 
 import android.Manifest;
 import android.app.Activity;
@@ -65,11 +66,11 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -130,9 +131,6 @@ public class Analytics {
   @Private final String writeKey;
   final int flushQueueSize;
   final long flushIntervalInMillis;
-  // Retrieving the advertising ID is asynchronous. This latch helps us wait to ensure the
-  // advertising ID is ready.
-  private final CountDownLatch advertisingIdLatch;
   private final ExecutorService analyticsExecutor;
   private final BooleanPreference optOut;
 
@@ -214,7 +212,6 @@ public class Analytics {
       long flushIntervalInMillis,
       final ExecutorService analyticsExecutor,
       final boolean shouldTrackApplicationLifecycleEvents,
-      CountDownLatch advertisingIdLatch,
       final boolean shouldRecordScreenViews,
       final boolean trackAttributionInformation,
       BooleanPreference optOut,
@@ -234,7 +231,6 @@ public class Analytics {
     this.writeKey = writeKey;
     this.flushQueueSize = flushQueueSize;
     this.flushIntervalInMillis = flushIntervalInMillis;
-    this.advertisingIdLatch = advertisingIdLatch;
     this.optOut = optOut;
     this.factories = factories;
     this.analyticsExecutor = analyticsExecutor;
@@ -259,7 +255,7 @@ public class Analytics {
               // }
               projectSettings =
                   ProjectSettings.create(
-                      new ValueMap() //
+                      new ValueMap()
                           .putValue(
                               "integrations",
                               new ValueMap()
@@ -346,8 +342,6 @@ public class Analytics {
       return;
     }
 
-    waitForAdvertisingId();
-
     Client.Connection connection = null;
     try {
       connection = client.attribution();
@@ -386,13 +380,11 @@ public class Analytics {
     if (previousBuild == -1) {
       track(
           "Application Installed",
-          new Properties() //
-              .putValue(VERSION_KEY, currentVersion)
-              .putValue(BUILD_KEY, currentBuild));
+          new Properties().putValue(VERSION_KEY, currentVersion).putValue(BUILD_KEY, currentBuild));
     } else if (currentBuild != previousBuild) {
       track(
           "Application Updated",
-          new Properties() //
+          new Properties()
               .putValue(VERSION_KEY, currentVersion)
               .putValue(BUILD_KEY, currentBuild)
               .putValue("previous_" + VERSION_KEY, previousVersion)
@@ -402,9 +394,7 @@ public class Analytics {
     // Track Application Opened.
     track(
         "Application Opened",
-        new Properties() //
-            .putValue("version", currentVersion) //
-            .putValue("build", currentBuild));
+        new Properties().putValue("version", currentVersion).putValue("build", currentBuild));
 
     // Update the recorded version.
     SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -481,7 +471,7 @@ public class Analytics {
    * @see <a href="https://segment.com/docs/spec/identify/">Identify Documentation</a>.
    */
   public void identify(
-      @Nullable String userId, @Nullable Traits newTraits, final @Nullable Options options) {
+      @Nullable String userId, @Nullable Traits newTraits, @Nullable Options options) {
     assertNotShutdown();
     if (isNullOrEmpty(userId) && isNullOrEmpty(newTraits)) {
       throw new IllegalArgumentException("Either userId or some traits must be provided.");
@@ -498,22 +488,12 @@ public class Analytics {
     traitsCache.set(traits); // Save the new traits
     analyticsContext.setTraits(traits); // Update the references
 
-    analyticsExecutor.submit(
-        new Runnable() {
-          @Override
-          public void run() {
-            final Options finalOptions;
-            if (options == null) {
-              finalOptions = defaultOptions;
-            } else {
-              finalOptions = options;
-            }
+    if (options == null) {
+      options = defaultOptions;
+    }
 
-            IdentifyPayload.Builder builder =
-                new IdentifyPayload.Builder().traits(traitsCache.get());
-            fillAndEnqueue(builder, finalOptions);
-          }
-        });
+    IdentifyPayload.Builder builder = new IdentifyPayload.Builder().traits(traitsCache.get());
+    fillAndEnqueue(builder, options);
   }
 
   /** @see #group(String, Traits, Options) */
@@ -540,37 +520,22 @@ public class Analytics {
    * @see <a href="https://segment.com/docs/spec/group/">Group Documentation</a>
    */
   public void group(
-      @NonNull final String groupId,
-      @Nullable final Traits groupTraits,
-      @Nullable final Options options) {
+      @NonNull String groupId, @Nullable Traits groupTraits, @Nullable Options options) {
     assertNotShutdown();
     if (isNullOrEmpty(groupId)) {
       throw new IllegalArgumentException("groupId must not be null or empty.");
     }
 
-    analyticsExecutor.submit(
-        new Runnable() {
-          @Override
-          public void run() {
-            final Traits finalGroupTraits;
-            if (groupTraits == null) {
-              finalGroupTraits = new Traits();
-            } else {
-              finalGroupTraits = groupTraits;
-            }
+    if (groupTraits == null) {
+      groupTraits = new Traits();
+    }
 
-            final Options finalOptions;
-            if (options == null) {
-              finalOptions = defaultOptions;
-            } else {
-              finalOptions = options;
-            }
+    if (options == null) {
+      options = defaultOptions;
+    }
 
-            GroupPayload.Builder builder =
-                new GroupPayload.Builder().groupId(groupId).traits(finalGroupTraits);
-            fillAndEnqueue(builder, finalOptions);
-          }
-        });
+    GroupPayload.Builder builder = new GroupPayload.Builder().groupId(groupId).traits(groupTraits);
+    fillAndEnqueue(builder, options);
   }
 
   /** @see #track(String, Properties, Options) */
@@ -595,37 +560,22 @@ public class Analytics {
    * @see <a href="https://segment.com/docs/spec/track/">Track Documentation</a>
    */
   public void track(
-      final @NonNull String event,
-      final @Nullable Properties properties,
-      @Nullable final Options options) {
+      @NonNull String event, @Nullable Properties properties, @Nullable Options options) {
     assertNotShutdown();
     if (isNullOrEmpty(event)) {
       throw new IllegalArgumentException("event must not be null or empty.");
     }
 
-    analyticsExecutor.submit(
-        new Runnable() {
-          @Override
-          public void run() {
-            final Options finalOptions;
-            if (options == null) {
-              finalOptions = defaultOptions;
-            } else {
-              finalOptions = options;
-            }
+    if (options == null) {
+      options = defaultOptions;
+    }
 
-            final Properties finalProperties;
-            if (properties == null) {
-              finalProperties = EMPTY_PROPERTIES;
-            } else {
-              finalProperties = properties;
-            }
+    if (properties == null) {
+      properties = EMPTY_PROPERTIES;
+    }
 
-            TrackPayload.Builder builder =
-                new TrackPayload.Builder().event(event).properties(finalProperties);
-            fillAndEnqueue(builder, finalOptions);
-          }
-        });
+    TrackPayload.Builder builder = new TrackPayload.Builder().event(event).properties(properties);
+    fillAndEnqueue(builder, options);
   }
 
   /**
@@ -666,42 +616,27 @@ public class Analytics {
    * @see <a href="https://segment.com/docs/spec/screen/">Screen Documentation</a>
    */
   public void screen(
-      @Nullable final String category,
-      @Nullable final String name,
-      @Nullable final Properties properties,
-      @Nullable final Options options) {
+      @Nullable String category,
+      @Nullable String name,
+      @Nullable Properties properties,
+      @Nullable Options options) {
     assertNotShutdown();
     if (isNullOrEmpty(category) && isNullOrEmpty(name)) {
       throw new IllegalArgumentException("either category or name must be provided.");
     }
 
-    analyticsExecutor.submit(
-        new Runnable() {
-          @Override
-          public void run() {
-            final Options finalOptions;
-            if (options == null) {
-              finalOptions = defaultOptions;
-            } else {
-              finalOptions = options;
-            }
+    if (options == null) {
+      options = defaultOptions;
+    }
 
-            final Properties finalProperties;
-            if (properties == null) {
-              finalProperties = EMPTY_PROPERTIES;
-            } else {
-              finalProperties = properties;
-            }
+    if (properties == null) {
+      properties = EMPTY_PROPERTIES;
+    }
 
-            //noinspection deprecation
-            ScreenPayload.Builder builder =
-                new ScreenPayload.Builder()
-                    .name(name)
-                    .category(category)
-                    .properties(finalProperties);
-            fillAndEnqueue(builder, finalOptions);
-          }
-        });
+    //noinspection deprecation
+    ScreenPayload.Builder builder =
+        new ScreenPayload.Builder().name(name).category(category).properties(properties);
+    fillAndEnqueue(builder, options);
   }
 
   /** @see #alias(String, Options) */
@@ -728,48 +663,23 @@ public class Analytics {
    * @throws IllegalArgumentException if newId is null or empty
    * @see <a href="https://segment.com/docs/tracking-api/alias/">Alias Documentation</a>
    */
-  public void alias(final @NonNull String newId, final @Nullable Options options) {
+  public void alias(@NonNull String newId, @Nullable Options options) {
     assertNotShutdown();
     if (isNullOrEmpty(newId)) {
       throw new IllegalArgumentException("newId must not be null or empty.");
     }
 
-    analyticsExecutor.submit(
-        new Runnable() {
-          @Override
-          public void run() {
-            final Options finalOptions;
-            if (options == null) {
-              finalOptions = defaultOptions;
-            } else {
-              finalOptions = options;
-            }
-
-            AliasPayload.Builder builder =
-                new AliasPayload.Builder()
-                    .userId(newId)
-                    .previousId(analyticsContext.traits().currentId());
-            fillAndEnqueue(builder, finalOptions);
-          }
-        });
-  }
-
-  private void waitForAdvertisingId() {
-    try {
-      advertisingIdLatch.await(15, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-      logger.error(e, "Thread interrupted while waiting for advertising ID.");
+    if (options == null) {
+      options = defaultOptions;
     }
-    if (advertisingIdLatch.getCount() == 1) {
-      logger.debug(
-          "Advertising ID may not be collected because the API did not respond within 15 seconds.");
-    }
+
+    AliasPayload.Builder builder =
+        new AliasPayload.Builder().userId(newId).previousId(analyticsContext.traits().currentId());
+    fillAndEnqueue(builder, options);
   }
 
   @Private
-  void fillAndEnqueue(BasePayload.Builder<?, ?> builder, Options options) {
-    waitForAdvertisingId();
-
+  void fillAndEnqueue(@NonNull BasePayload.Builder<?, ?> builder, @NonNull Options options) {
     AnalyticsContext contextCopy = analyticsContext.unmodifiableCopy();
     builder.context(contextCopy);
     builder.anonymousId(contextCopy.traits().anonymousId());
@@ -778,16 +688,21 @@ public class Analytics {
     if (!isNullOrEmpty(userId)) {
       builder.userId(userId);
     }
-    enqueue(builder.build());
-  }
-
-  void enqueue(BasePayload payload) {
+    final BasePayload payload = builder.build();
+    logger.verbose("Created payload %s.", payload);
     if (optOut.get()) {
+      logger.verbose("Not sending %s as user has opted out.", payload);
       return;
     }
-    logger.verbose("Created payload %s.", payload);
-    Middleware.Chain chain = new RealMiddlewareChain(0, payload, middlewares, this);
-    chain.proceed(payload);
+    analyticsExecutor.submit(
+        new Runnable() {
+          @Override
+          public void run() {
+            Middleware.Chain chain =
+                new RealMiddlewareChain(0, payload, middlewares, Analytics.this);
+            chain.proceed(payload);
+          }
+        });
   }
 
   void run(BasePayload payload) {
@@ -1330,14 +1245,18 @@ public class Analytics {
       Logger logger = Logger.with(logLevel);
       AnalyticsContext analyticsContext =
           AnalyticsContext.create(application, traitsCache.get(), collectDeviceID);
-      CountDownLatch advertisingIdLatch = new CountDownLatch(1);
-      analyticsContext.attachAdvertisingId(application, advertisingIdLatch, logger);
 
       List<Integration.Factory> factories = new ArrayList<>(1 + this.factories.size());
       factories.add(SegmentIntegration.FACTORY);
       factories.addAll(this.factories);
 
-      List<Middleware> middlewares = Utils.immutableCopyOf(this.middlewares);
+      List<Middleware> middlewares = new LinkedList<>();
+      if (!isNullOrEmpty(this.middlewares)) {
+        middlewares.addAll(this.middlewares);
+      }
+      if (isOnClassPath("com.google.android.gms.ads.identifier.AdvertisingIdClient")) {
+        middlewares.add(new AdvertisingIdMiddleware(logger, application));
+      }
 
       ExecutorService executor = this.executor;
       if (executor == null) {
@@ -1362,7 +1281,6 @@ public class Analytics {
           flushIntervalInMillis,
           executor,
           trackApplicationLifecycleEvents,
-          advertisingIdLatch,
           recordScreenViews,
           trackAttributionInformation,
           optOut,
