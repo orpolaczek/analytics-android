@@ -3,9 +3,17 @@ apply plugin: 'com.f2prateek.javafmt'
 
 apply from: rootProject.file('gradle/android.gradle')
 
+allprojects {
+  repositories {
+    maven { url 'https://jitpack.io' }
+    maven { url  "http://comscore.bintray.com/Analytics" }
+  }
+}
+
 dependencies {
   compile project(':analytics')
   compile project(':analytics-wear')
+  compile 'com.github.segment-integrations:analytics-android-integration-comscore:adds-video-tracking-SNAPSHOT'
 
   compile 'com.jakewharton:butterknife:8.4.0'
   provided 'com.jakewharton:butterknife-compiler:8.4.0'

@@ -4,11 +4,11 @@ import android.app.Application;
 import android.util.Log;
 import com.segment.analytics.Analytics;
 import uk.co.chrisjenx.calligraphy.CalligraphyConfig;
+import com.segment.analytics.android.integrations.comscore.ComScoreIntegration;
 
 public class SampleApp extends Application {
 
-  // https://segment.com/segment-engineering/sources/android-test/settings/keys
-  private static final String ANALYTICS_WRITE_KEY = "5m6gbdgho6";
+  private static final String ANALYTICS_WRITE_KEY = "<YOUR_WRITE_KEY>";
 
   @Override
   public void onCreate() {
@@ -23,6 +23,7 @@ public class SampleApp extends Application {
     // Initialize a new instance of the Analytics client.
     Analytics.Builder builder =
         new Analytics.Builder(this, ANALYTICS_WRITE_KEY)
+            .use(ComScoreIntegration.FACTORY)
             .trackApplicationLifecycleEvents()
             .trackAttributionInformation()
             .recordScreenViews();
