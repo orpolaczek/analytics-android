@@ -6,9 +6,41 @@ analytics-android
 
 analytics-android makes it easy to collect customer data and send it to many different tools using a single, unified API.
 
-## Documentation
+## Download
 
-You can find detailed usage documentation at [https://segment.com/libraries/android](https://segment.com/libraries/android).
+```bash
+compile 'com.segment.analytics.java:analytics:+'
+```
+
+## Snapshots
+
+All changes committed to master are automatically released as snapshots.
+
+To add a snapshot dependency to your builds, make sure you add the snapshot repository so your build system can look up the dependency.
+
+Maven users can add the following to their `pom.xml`:
+```
+<repository>
+    <id>ossrh</id>
+    <name>Sonatype Snapshot Repository</name>
+    <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    <releases>
+        <enabled>false</enabled>
+    </releases>
+    <snapshots>
+        <enabled>true</enabled>
+    </snapshots>
+</repository>
+```
+
+Gradle users should declare this in their repositories block:
+```
+repositories {
+  mavenCentral()
+  maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+}
+```
+
 
 ## License
 

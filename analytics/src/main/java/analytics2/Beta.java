@@ -1,4 +1,4 @@
-package analytics;
+package analytics2;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
