@@ -4,15 +4,11 @@ analytics-android
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.segment.analytics.android/analytics/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.segment.analytics.android/analytics)
 [![Javadocs](http://javadoc-badge.appspot.com/com.segment.analytics.android/analytics.svg?label=javadoc)](http://javadoc-badge.appspot.com/com.segment.analytics.android/analytics)
 
-analytics-android is an Android client for [Segment](https://segment.com)
+analytics-android makes it easy to collect customer data and send it to many different tools using a single, unified API.
 
 ## Documentation
 
-You can find usage documentation at [https://segment.com/libraries/android](https://segment.com/libraries/android).
-
-## Integrating with Segment
-
-Interested in integrating your service with us? Check out our [Partners page](https://segment.com/partners/) for more details.
+You can find detailed usage documentation at [https://segment.com/libraries/android](https://segment.com/libraries/android).
 
 ## License
 
@@ -30,7 +26,7 @@ WWWWWW||WWWWWW
 
 The MIT License (MIT)
 
-Copyright (c) 2016 Segment, Inc.
+Copyright (c) 2017 Segment, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

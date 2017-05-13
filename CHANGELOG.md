@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Version 5.0.0 (in progress)
+===========================
+
+ * Major rewrite with multiple API changes.
+
 Version 4.3.0-RC1 (May 10th, 2017)
 ==============================
  * [New](https://github.com/segmentio/analytics-android/pull/515): Add Middlewares.
