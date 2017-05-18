@@ -1,0 +1,21 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: bitriseio/docker-android
+    working_directory: ~/analytics-android
+    steps:
+      - checkout
+      - run:
+          name: Copy Licenses
+          command: cp -R .buildscript/licenses $ANDROID_HOME/licenses
+      - run:
+          name: Dependencies
+          command: ./gradlew dependencies
+          environment:
+            TERM: dumb
+      - run:
+          name: Build
+          command: ./gradlew build
+          environment:
+            TERM: dumb
